@@ -1,40 +1,13 @@
 require 'rubygems'
 require 'neography'
-
-def test_method
-  "Hello from Test Method"
-end
-
-#def suggestions_for(node)
-#  @neo.traverse(node,
-#                "nodes", 
-#                {"order" => "breadth first", 
-#                 "uniqueness" => "node global", 
-#                 "relationships" => {"type"=> "friends", 
-#                                     "direction" => "in"}, 
-#                 "return filter" => {"language" => "javascript",
-#                                     "body" => "position.length() == 2;"},
-#                 "depth" => 2}).map{|n| n["data"]["name"]}.join(', ')
-#end
-
-#puts "nn #{suggestion_for(1)}"
+require 'yajl'
+require './content_asset_models'
 
 
+class Graph
 
-class NodeContentConcept do
-  
-  include Id:Model
+def get_content_assets_by_uri(uri)
 
-  field :id
-  field :type
-  field :name
-
-end
-
-
-
-
-def test_neo4j
   Neography.configure do |config|
     config.protocol       = "http://"
     config.server         = "localhost"
@@ -53,23 +26,44 @@ def test_neo4j
  
   @neo = Neography::Rest.new
 
+
+  @nodeid = 0
+
+  if (uri == 'article/asthma/overview')
+    @nodeid = 9
+  elsif (uri == 'article/asthma/living-with-arthritis')
+    @nodeid = 10
+  end
+
   # Cypher queries:
-  s = @neo.execute_query("start n=node(1) return n")
 
-  puts s.inspect
+  responce = @neo.execute_query("start n=node(9) match n-[:URI_CONTENT_ASSOC]->m-[:ASSET_ASSOC]->asset  return asset;")
 
-  "a"
-
-end
-
-describe "test the test_method" do
-  it 'should return something' do
-    expect(test_method).to eq "Hello from Test Method"
+  items = responce["data"].flat_map do |my_array|
+    my_array.map{|x|x["data"]}
   end
+
+  #items.each {|x| puts x, " -- "}
+
+  @final_array = []
+
+  items.each do |x|
+    puts x["type"]
+    
+    if x["type"] == "Content_Asset_Article"
+      @final_array << ContentEditorial.new(x["id"], x["type"], x["name"])
+    elsif x["type"] == "Content_Asset_Teaser"
+      @final_array << ContentTeaser.new(x["id"], x["type"], x["name"])
+    #elsif x["type"] == "Content_Asset_Video"
+    #elsif x["type"] == "Content_Asset_Image"
+    end
+
+  end
+
+  @final_array
+
 end
 
-describe "test nero4j" do
-  it 'test nero4j' do
-    expect(test_neo4j).to eq "a"
-  end
 end
+
+# get_content_assets_by_uri('article.asthma/overview')
